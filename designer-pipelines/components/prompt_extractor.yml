@@ -1,0 +1,19 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+name: prompt_extractor
+code: .
+command: >-
+  python prompt_extractor.py 
+  --prompts ${{inputs.prompts}}
+  --output ${{outputs.output}} 
+inputs:
+  prompts: 
+    type: uri_file
+outputs:
+  output:
+    type: uri_folder
+    mode: rw_mount
+environment: azureml:text-to-image-pipeline-env@latest
+compute: azureml:antonslutsky2
+display_name: prompt_extractor
+experiment_name: text-to-image-pipeline
+description: Extract prompts from the input data

@@ -1,0 +1,11 @@
+name: text-to-image-pipeline-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - azureml-evaluate-mlflow==0.0.35
+    - inference-schema[numpy-support]==1.3.0
+    - pyarrow
+    - torch
