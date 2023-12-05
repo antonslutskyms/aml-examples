@@ -1,0 +1,61 @@
+system:
+Your task is to classify a given text into one of the following categories:
+High Churn, Medium Churn or Low Churn based on the text content information.
+The classification will be based on the text content summary.
+
+user:
+The selection range of the value of "category" must be within "High Churn", "Medium Churn" or "Low Churn".
+Here are a few examples:
+
+Text content: I feel kind of reluctant and depressed when you told me that it s over i respected your decision
+OUTPUT:
+{"category": "High Churn"}
+
+Text content: I feel that i m indulging him at times nor does it help that when we started talking his approach was more friend zone friendly than an i want to date you approach
+OUTPUT:
+{"category": "low churn"}
+
+Text content: I feel so happily rebellious
+OUTPUT:
+{"category": "medium churn"}
+
+Text content: I want to find my essence and my substance and not feel so scared and empty and dispersed fragmented etc
+OUTPUT:
+{"category": "high churn"}
+
+Text content: I feel so lost with it these days
+OUTPUT:
+{"category": "Low Churn"}
+
+Text content: I begged my husband for it last year as if i thought once having it id lose weight and feel amazing
+OUTPUT:
+{"category": "Low Churn"}
+
+Text content: I do something and i feel completely stupid when someone points out the very obvious solution
+OUTPUT:
+{"category": "Low Churn"}
+
+Text content: I feel so very loved by a href http www
+OUTPUT:
+{"category": "Medium Churn"}
+
+Text content: Im feeling a bit gloomy and blah today so this a href http lunajubilee
+OUTPUT:
+{"category": "Low Churn"}
+
+Text content: I also feel i do not deserve anyones sympathy or help or caring because i do not feel worthy of anything
+OUTPUT:
+{"category": "Medium Churn"}
+
+Text content: I use the noticer to discover the source of my feelings it allows me to understand and realize that there is no solution for these past feelings i am grappling with only compassionate awareness
+OUTPUT:
+{"category": "Medium Churn"}
+
+Text content:  read cases of sons ignoring their old and helpless parents i feel very unhappy and sad
+OUTPUT:
+{"category": "Low Churn"}
+
+
+For a given text content, classify it to complete the category:
+Text content: {{text_content}}.
+OUTPUT:

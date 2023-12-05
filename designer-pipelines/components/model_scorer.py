@@ -15,52 +15,25 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mlflow_model", type=str, help="mlflow model")
     parser.add_argument("--prompts", type=str, help="path to prompts input")
-    parser.add_argument("--task_def", type=str, help="path to task instructions")
     parser.add_argument("--predictions", type=str, help="path to predictions output")
     args = parser.parse_args()
 
     # Start Logging
     mlflow.start_run()
 
-    task_def = open(args.task_def).read()
 
-    print(f"Task def: {task_def}")
 
     print(f"Got prompts: {args.prompts}")
 
-    batch_df = pd.read_parquet(args.prompts, engine='pyarrow')
-
-    print("Loaded columns: ", batch_df.columns)
-
-    batch_df = batch_df[["prompt"]]
-
-    batch_df['prompt'] = task_def + batch_df['prompt'].astype(str)
-
-    batch_df = batch_df.head()
-
-    print("Head:")
-
-    print(batch_df.head())
-
-    for i in range(len(batch_df)):
-        print(f"Prompt {i}: {batch_df['prompt'][i]}")
-
-    print(f"{args.mlflow_model}")
-
-
-    model_contents = os.listdir(args.mlflow_model)
-    print(f"{model_contents}")
-
-    if "MLmodel" in model_contents:
-        print("MLmodel found")
-
-        print(f"{open(f'{args.mlflow_model}/MLmodel').read()}")
-
-    
+    batch_df = pd.read_json(args.prompts, lines=True)
 
     model = mlflow.pyfunc.load_model(args.mlflow_model)
     
     print(f"Loaded model object: {model}")
+
+    batch_df['input_string'] = batch_df['text'].astype(str)
+
+    batch_df = batch_df[["input_string"]]
     
     predictions = model.predict(batch_df)
 
@@ -75,10 +48,13 @@ def main():
 
     for i in range(len(predictions[0])):
         print("********************************************************************")
-        print(f"Prediction {i}: {predictions[0][i]}")
+        p_clean = predictions[0][i].replace('\n', '')
+        print(f"Input String{i}: {batch_df['input_string'][i]}")
+        print(f"Prediction {i}: {p_clean}")
         print("********************************************************************")
 
     predictions_df = pd.DataFrame(predictions[0])
+    predictions_df["input_string"] = batch_df["input_string"]
 
     predictions_df.to_csv(args.predictions, index=False, header=False)
     

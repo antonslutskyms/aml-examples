@@ -1,24 +1,21 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
-name: model_scorer
+name: your_custom_model_scorer
 code: .
 command: >-
   python model_scorer.py 
   --mlflow_model ${{inputs.mlflow_model}}
   --prompts ${{inputs.prompts}}
-  --task_def ${{inputs.task_def}}
   --predictions ${{outputs.predictions}}
 inputs:
   mlflow_model: 
     type: uri_folder
   prompts: 
     type: uri_file
-  task_def:
-    type: uri_file
 outputs:
   predictions:
     type: uri_file
 environment: azureml:custom-env-1@latest
-compute: azureml:inference-compute-4a
-display_name: model_scorer
+compute: azureml:FT-Standard-NC24s-v3
+display_name: your_custom_model_scorer
 experiment_name: text-to-image-pipeline
 description: Score an MLFlow model

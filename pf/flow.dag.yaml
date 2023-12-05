@@ -1,0 +1,37 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+id: simple_classification_flow
+name: simple_classification_flow
+inputs:
+  text_content:
+    type: string
+    default: I feel that i m indulging him at times nor does it help that when we
+      started talking his approach was more friend zone friendly than an i want
+      to date you approach
+outputs:
+  classification_category:
+    type: string
+    reference: ${classify_input.output}
+nodes:
+- name: classify_input
+  type: llm
+  source:
+    type: code
+    path: ./classification_pf.jinja2
+  inputs:
+    deployment_name: test-pf-deployment
+    temperature: 1
+    top_p: 1
+    stop: ""
+    max_tokens: 256
+    presence_penalty: 0
+    frequency_penalty: 0
+    logit_bias: ""
+    text_content: ${inputs.text_content}
+  provider: AzureOpenAI
+  connection: azure-openai-connection
+  api: chat
+  module: promptflow.tools.aoai
+  use_variants: false
+node_variants: {}
+environment:
+    python_requirements_txt: requirements.txt
