@@ -163,7 +163,7 @@ local_*
 
 */.terraform
 **/.terraform.*
-**/.terraform.exe
+**/*.exe
 **/.terraform/*
 **/*.tfplan
 **/*.tfstate
