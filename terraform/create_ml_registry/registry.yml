@@ -1,0 +1,8 @@
+name: DemoRegistry4
+tags:
+  description: Basic registry with one primary region and to additional regions
+location: eastus
+replication_locations:
+  - location: eastus
+  - location: eastus2
+  - location: westus
