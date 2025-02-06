@@ -163,4 +163,4 @@ local_*
 
 */.terraform
 */.terraform.*
-*/.terraform/*
+*/*/.terraform/*
