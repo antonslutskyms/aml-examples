@@ -164,3 +164,4 @@ local_*
 */.terraform
 **/.terraform.*
 **/.terraform/*
+**/*.tfplan
