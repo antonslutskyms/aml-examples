@@ -162,5 +162,5 @@ cython_debug/
 local_*
 
 */.terraform
-*/.terraform.*
-*/*/.terraform/*
+**/.terraform.*
+**/.terraform/*
