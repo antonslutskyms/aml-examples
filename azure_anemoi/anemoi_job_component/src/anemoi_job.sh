@@ -1,0 +1,32 @@
+echo "Input Params: $1 $2 $3"
+
+echo "defaults:
+- data: zarr
+- dataloader: native_grid
+- diagnostics: evaluation
+- hardware: example
+- graph: multi_scale
+- model: transformer # Change from default group
+- training: default
+- _self_
+
+data:
+   resolution: n320
+
+hardware:
+   num_gpus_per_node: 1
+   paths:
+      output: $3/output
+      data: $1
+      graph: $3/graphs
+   files:
+      dataset: $2
+      graph: first_graph_n320.pt
+
+training:
+   lr:
+      rate: 1e-3" > config.yaml
+
+      
+
+anemoi-training train --config-name=config.yaml

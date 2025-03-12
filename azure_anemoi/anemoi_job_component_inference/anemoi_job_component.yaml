@@ -1,0 +1,16 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+code: ./src
+command: >-
+  ./anemoi_job.sh ${{inputs.zarr_folder}} ${{outputs.output_dir}}
+inputs:
+  zarr_folder: 
+    type: uri_folder
+    mode: ro_mount
+    #path: azureml://subscriptions/781b03e7-6eb7-4506-bab8-cf3a0d89b1d4/resourcegroups/antonslutsky-rg/workspaces/graphcast-workspace/datastores/workspaceblobstore/paths/azureml/placid_door_g7r571hl9y/output_dir/
+outputs:
+  output_dir:
+    type: uri_folder
+    mode: rw_mount
+environment: azureml:anemoi_acpt_env@latest
+name: anemoi_job_component
+description: Anemoi_Job_Component

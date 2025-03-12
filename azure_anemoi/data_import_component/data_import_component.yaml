@@ -1,0 +1,21 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+code: ./src
+command: >-
+  python ./data_import_component.py --source ${{inputs.source}} --output_dir ${{outputs.output_dir}} --output_zarr ${{inputs.output_zarr}}
+inputs:
+  source: 
+    type: string
+  output_zarr: 
+    type: string
+  #gs://noaa-ufs-gefsv13replay/ufs-hr1/0.25-degree/03h-freq/zarr/fv3.zarr
+outputs:
+  output_dir:
+    type: uri_folder
+    mode: rw_mount
+environment: 
+  image: mcr.microsoft.com/azureml/openmpi3.1.2-ubuntu18.04:latest
+  conda_file: ./environment/conda.yaml
+
+name: data_import_component
+
+description: Data_Import_Component

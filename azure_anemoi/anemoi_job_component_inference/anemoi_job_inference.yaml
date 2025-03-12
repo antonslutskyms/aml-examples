@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: ./src
+command: >-
+  python ./anemoi_job_inference.py ${{inputs.model_name}} ${{inputs.input_data}} ${{outputs.output_dir}}
+inputs:
+  model_name: ecmwf/aifs-single-0.2.1
+  input_data: 
+    type: uri_folder
+    mode: ro_mount
+    path: azureml://subscriptions/781b03e7-6eb7-4506-bab8-cf3a0d89b1d4/resourcegroups/antonslutsky-rg/workspaces/graphcast-workspace/datastores/workspaceblobstore/paths/azureml/placid_door_g7r571hl9y/output_dir/
+outputs:
+  output_dir:
+    type: uri_folder
+    mode: rw_mount
+services:
+    my_vs_code:
+      type: vs_code
+      nodes: all 
+    my_jupyter_lab:
+      type: jupyter_lab
+      nodes: all
+compute: azureml:Standard-NC24ads-A100-v4
+display_name: anemoi_job_inference
+environment: azureml:anemoi_inference@latest
+description: Anemoi_Job_Inference

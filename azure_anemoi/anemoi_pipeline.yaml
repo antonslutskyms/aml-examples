@@ -1,0 +1,44 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineComponent.schema.json
+type: pipeline
+name: anemoi_pipeline
+
+display_name: anemoi_pipeline
+description: Anemoi Weather Modeling Pipeline
+
+
+inputs:
+  source: gs://noaa-ufs-gefsv13replay/ufs-hr1/0.25-degree/03h-freq/zarr/fv3.zarr
+    
+outputs:
+  final_model:
+    type: uri_folder
+
+jobs:
+  zarr_import:
+    type: command
+    component: ./zarr_import_component/zarr_import_component.yaml
+    inputs:
+      source: ${{parent.inputs.source}}
+    outputs:
+      output_dir:
+        type: uri_folder
+        mode: rw_mount
+    compute: azureml:zarr-import-ci
+    
+  
+  anemoi_job:
+    type: command
+    component: ./anemoi_job_component/anemoi_job_component.yaml
+    inputs:
+      zarr_folder: ${{parent.jobs.zarr_import.outputs.output_dir}}
+    outputs:  
+      output_dir: ${{parent.outputs.final_model}}
+    compute: azureml:anemoi-cluster-1
+    services:
+      my_vs_code:
+        type: vs_code
+        nodes: all 
+      my_jupyter_lab:
+        type: jupyter_lab
+        nodes: all
+        

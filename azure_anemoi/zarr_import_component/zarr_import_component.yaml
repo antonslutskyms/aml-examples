@@ -1,0 +1,19 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+code: ./src
+command: >-
+  ./zarr_import_gutil.sh ${{inputs.source}} ${{outputs.output_dir}}; sleep 12000
+inputs:
+  source: 
+    type: string
+  #gs://noaa-ufs-gefsv13replay/ufs-hr1/0.25-degree/03h-freq/zarr/fv3.zarr
+outputs:
+  output_dir:
+    type: uri_folder
+    mode: rw_mount
+environment: 
+  image: mcr.microsoft.com/azureml/openmpi3.1.2-ubuntu18.04:latest
+  conda_file: ./environment/conda.yaml
+
+name: zarr_import_component
+
+description: Zarr_Import_Component
