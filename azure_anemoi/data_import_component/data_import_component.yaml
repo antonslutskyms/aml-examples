@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 code: ./src
 command: >-
-  python ./data_import_component.py --source ${{inputs.source}} --output_dir ${{outputs.output_dir}} --output_zarr ${{inputs.output_zarr}}
+   ./data_import_component.sh --source ${{inputs.source}} --output_dir ${{outputs.output_dir}} --output_zarr ${{inputs.output_zarr}}
 inputs:
   source: 
     type: string

@@ -14,11 +14,11 @@ data:
 hardware:
    num_gpus_per_node: 1
    paths:
-      output: /mnt/azureml/cr/j/68b11c267ccb4b95bf3497fe77057150/cap/data-capability/wd/output_dir/output
-      data: /mnt/azureml/cr/j/68b11c267ccb4b95bf3497fe77057150/cap/data-capability/wd/INPUT_zarr_folder
-      graph: /mnt/azureml/cr/j/68b11c267ccb4b95bf3497fe77057150/cap/data-capability/wd/output_dir/graph
+      output: /output
+      data: .
+      graph: /graph
    files:
-      dataset: noaa-nwm-retro-v2-zarr-pds.zarr
+      dataset: dataset.zarr
       graph: first_graph_n320.pt
 
 training:

@@ -1,0 +1,21 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: ./src
+command: >-
+  python run_neuralforecast.py; sleep 12000
+environment: azureml:neuralforecast@latest
+services:
+    my_vs_code:
+      type: vs_code
+      nodes: all 
+    my_jupyter_lab:
+      type: jupyter_lab
+      nodes: all
+resources:
+  instance_count: 1
+  shm_size: 1000G
+distribution:
+  type: pytorch 
+  process_count_per_instance: 4
+compute: azureml:Standard-NC96ads-A100-v4
+display_name: neuralforecast_job
+description: Neuralforecast_Job
