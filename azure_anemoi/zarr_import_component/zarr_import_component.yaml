@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 code: ./src
 command: >-
-  ./zarr_import_gutil.sh ${{inputs.source}} ${{outputs.output_dir}}; sleep 12000
+  ./zarr_import_gutil.sh ${{inputs.source}} ${{outputs.output_dir}};
 inputs:
   source: 
     type: string

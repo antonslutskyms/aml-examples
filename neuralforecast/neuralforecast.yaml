@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
 code: ./src
 command: >-
-  python run_neuralforecast.py; sleep 12000
+  python run_neuralforecast.py;
 environment: azureml:neuralforecast@latest
 services:
     my_vs_code:
