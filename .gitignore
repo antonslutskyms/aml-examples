@@ -167,3 +167,5 @@ local_*
 **/.terraform/*
 **/*.tfplan
 **/*.tfstate
+
+3d_objects/output
