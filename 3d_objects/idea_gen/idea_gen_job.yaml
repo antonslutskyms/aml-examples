@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: ./src
+command: >-
+   python ./generate_idea.py "${{inputs.prompt}}" ${{outputs.output_idea}} 
+environment_variables:
+  AZURE_OPENAI_API_KEY: "6724480d8ac64e34a965a0df70369f6f"
+  ENDPOINT_URL: "https://ai-antonslutskyai898471136204.openai.azure.com/"
+inputs:
+  prompt: "Generate a one sentence that describes an idea for a whimsical, solid, one-piece 3D-printed object."
+outputs:
+  output_idea:
+    type: uri_file
+    mode: upload
+services:
+    my_vs_code:
+      type: vs_code
+      nodes: all 
+    my_jupyter_lab:
+      type: jupyter_lab
+      nodes: all
+environment: azureml://registries/azureml/environments/ai-studio-dev/versions/9
+compute: azureml:cpu-cluster
+experiment_name: 3d_object_inference
+display_name: idea_gen_job
+description: idea_gen_job

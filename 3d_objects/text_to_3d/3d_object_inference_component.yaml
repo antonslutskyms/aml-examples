@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/component.schema.json
+name: three_d_object_inference
+code: ./src
+command: >-
+   ./run.sh ${{inputs.flat_image}} ${{outputs.output_dir}} 
+inputs:
+  flat_image: 
+    type: uri_file
+    mode: ro_mount
+outputs:
+  output_dir:
+    type: uri_folder
+    mode: upload
+services:
+    my_vs_code:
+      type: vs_code
+      nodes: all 
+    my_jupyter_lab:
+      type: jupyter_lab
+      nodes: all
+environment: azureml:tellis3d_env:7
+compute: azureml:Standard-ND40rs-v2
+experiment_name: 3d_object_inference
+display_name: 3d_object_inference
+description: 3d_object_inference

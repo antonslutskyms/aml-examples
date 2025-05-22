@@ -1,0 +1,28 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: ./src
+command: >-
+   python ./generate_image.py "${{inputs.prompt}}" ${{outputs.output_image.png}} 
+environment_variables:
+  AZURE_OPENAI_API_KEY: "8ee14bc50a6c4fe1a44f961ebcbfdcbf"
+  AZURE_OPENAI_ENDPOINT: "https://ai-antonslutskyai2247982896338.openai.azure.com/"
+inputs:
+  prompt: 
+    type: uri_file
+    mode: ro_mount
+    path: azureml:azureml_mighty_truck_h9792qv7px_output_data_output_idea:1
+outputs:
+  output_image.png:
+    type: uri_file
+    mode: rw_mount
+services:
+    my_vs_code:
+      type: vs_code
+      nodes: all 
+    my_jupyter_lab:
+      type: jupyter_lab
+      nodes: all
+environment: azureml://registries/azureml/environments/ai-studio-dev/versions/9
+compute: azureml:cpu-cluster
+experiment_name: 3d_object_inference
+display_name: image_gen_job
+description: image_gen_job
