@@ -168,4 +168,4 @@ local_*
 **/*.tfplan
 **/*.tfstate
 
-3d_objects/output
+3d_objects/agents/output
