@@ -1,0 +1,15 @@
+name: IdeaGeneratorAgent
+template: |
+  
+  GENERATE A IDEA FOR A Jigsaw Puzzle.
+
+  Jigsaw Puzzle must be in the theme of geographical.
+
+  The puzzle must use strictly the following colors: black, white, red, blue, green
+
+template_format: semantic-kernel
+description: A function that generates a ideas for products.
+input_variables:
+  - name: colors
+    description: Product colors to use.
+    is_required: true

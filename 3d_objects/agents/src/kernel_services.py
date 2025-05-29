@@ -5,13 +5,18 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 import base64
 import os
 import time
+import sys
 from semantic_kernel import Kernel
 
 from services import Service
 from service_settings import ServiceSettings
 from image_gen_text_to_image import ImageGenTextToImage
 import requests
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, AsyncOpenAI, OpenAI
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+from datetime import datetime
+
 
 kernel = Kernel()
 
@@ -20,8 +25,9 @@ service_settings = ServiceSettings()
 # Select a service to use for this notebook (available services: OpenAI, AzureOpenAI, HuggingFace)
 selectedService = (
     Service.AzureOpenAI
-    if service_settings.global_llm_service is None
-    else Service(service_settings.global_llm_service.lower())
+    #Service.OpenAI
+    # if service_settings.global_llm_service is None
+    # else Service(service_settings.global_llm_service.lower())
 )
 print(f"Using service type: {selectedService}")
 
@@ -31,19 +37,24 @@ image_client = AsyncAzureOpenAI(
     azure_endpoint=os.getenv("AZURE_IMAGE_GEN_ENDPOINT"),
     api_key=os.getenv("AZURE_IMAGE_GEN_API_KEY"),
     api_version=os.getenv("AZURE_IMAGE_GEN_API_VERSION"),
-)   
+) if selectedService == Service.AzureOpenAI else AsyncOpenAI()
+
+#image_client = AsyncOpenAI()
+   
 
 # Remove all services so that this cell can be re-run without restarting the kernel
 kernel.remove_all_services()
 
 service_id = None
 if selectedService == Service.OpenAI:
-    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    sync_image_client = OpenAI()
 
+    
     service_id = "default"
     kernel.add_service(
         OpenAIChatCompletion(
             service_id=service_id,
+            ai_model_id="gpt-4.1"
         ),
     )
 elif selectedService == Service.AzureOpenAI:
@@ -56,19 +67,64 @@ elif selectedService == Service.AzureOpenAI:
         ),
     )
 
-    from semantic_kernel.connectors.ai.open_ai import OpenAITextToImage 
+from semantic_kernel.connectors.ai.open_ai import OpenAITextToImage 
 
-    image_gen_service = ImageGenTextToImage (
-        async_client=image_client,
-        ai_model_id="gpt-image-1",
-        service_id="gpt-image-1", # Optional; for targeting specific services within Semantic Kernel
-    )
-    kernel.add_service(image_gen_service)
+print("image_client: ", image_client)
+
+image_gen_service = ImageGenTextToImage (
+    async_client=image_client,
+    ai_model_id="gpt-image-1",
+    service_id="gpt-image-1", # Optional; for targeting specific services within Semantic Kernel
+)
+kernel.add_service(image_gen_service)
 
 image_gen_service = kernel.get_service(service_id="gpt-image-1")
 text_gen_service = kernel.get_service(service_id="default")
 
+
 chat_history = ChatHistory()
+
+
+def dump_history(_chat_history = chat_history, inflate_image = False):
+
+    inflated_chat_history = ChatHistory()
+
+    print("Chat History Sz::", len(_chat_history))
+    j = 1
+    for message in _chat_history:
+        print("..............................................................................................................")
+        print(f"#{j}")
+        print(f"[{message.role}] Message: ", message)
+
+        print("\tItems: ")
+        i = 1
+
+        inflated_items = []
+
+        for item in message.items:
+            _item = item
+
+            if inflate_image and isinstance(item, ImageContent):
+                print("Image content detected.  Item URI", item.uri)
+                
+                try:
+                    if not str(item.uri).startswith("data:image/"):
+                        _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
+                except AttributeError as ex:
+                    print("Error creating new content: ", ex, item) 
+
+            print(f"\t\tItem[{j}{++i}]: ", type(_item), str(_item)[:300], "...")
+
+            inflated_items.append(_item)
+
+        inflated_chat_history.add_message(ChatMessageContent(
+            role = message.role,
+            items=inflated_items
+        ))
+
+        j=j+1
+
+    return inflated_chat_history
 
 # Function to convert a file to Base64
 def file_to_base64(file_path):
@@ -77,118 +133,220 @@ def file_to_base64(file_path):
         base64_encoded = base64.b64encode(file.read()).decode("utf-8")
     return base64_encoded
 
-async def generate_image(prompt, image_path):
-    chat_history.add_message(ChatMessageContent(
+async def generate_image(prompt, image_path, save_image=True, external_chat_history=None):
+    _chat_history = external_chat_history if external_chat_history else chat_history
+    _chat_history.add_message(ChatMessageContent(
         role=AuthorRole.USER,
         items=[TextContent(text=prompt)]
     ))
 
+    a = datetime.now()
+    print(f"-- Image Generated starting at {a} seconds")
     image = await image_gen_service.generate_image(
         description=prompt, width=1024, height=1024, quality="auto"
     )
+    print(f"-- Image Generated in {datetime.now()-a} seconds")
 
-    image_data = base64.b64decode(image)
+    if save_image:
+        image_data = base64.b64decode(image)
 
-    with open(image_path, "wb") as image_file:
-        image_file.write(image_data)
+        with open(image_path, "wb") as image_file:
+            image_file.write(image_data)
 
-    base64_string = file_to_base64(image_path)
+        print("Saved Image to: ", image_path)
+#    base64_string = file_to_base64(image_path)
 
-    chat_history.add_message(ChatMessageContent(
+    _chat_history.add_message(ChatMessageContent(
         role=AuthorRole.USER,
         items=[
-                TextContent(text=prompt), 
-                ImageContent(uri=f"data:image/png;base64,{base64_string}")
+                #ImageContent(uri=f"data:image/png;base64,{image}")
+                ImageContent(uri=f"{image_path}")
         ]
     ))
 
     return image
 
-async def get_chat_message_content(prompt):
+async def get_chat_message_content(prompt, external_chat_history=None):
+    _chat_history = external_chat_history if external_chat_history else chat_history
+
 
     seed = int(time.time())
     print(f"Seed: {seed}")
     execution_settings = OpenAIChatPromptExecutionSettings(seed=seed)
 
-    #chat_history = ChatHistory()
-
-    chat_history.add_message(ChatMessageContent(
+    _chat_history.add_message(ChatMessageContent(
         role=AuthorRole.USER,
         items=[TextContent(text=prompt)]
     ))
 
+    a = datetime.now()
+    print(f"-- text_gen_service.get_chat_message_content starting at {a} seconds")
     return await text_gen_service.get_chat_message_content(
-        chat_history=chat_history,
+        chat_history=_chat_history,
         settings=execution_settings,
     )
+    print(f"-- text_gen_service.get_chat_message_content in {datetime.now()-a} seconds")
 
-async def evaluate_image(image_paths, prompt):
+
+import os
+
+async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64, external_chat_history=None):
+    _chat_history = external_chat_history if external_chat_history else chat_history
 
     if not isinstance(image_paths, list):
         image_paths = [image_paths]
-
 
     execution_settings = OpenAIChatPromptExecutionSettings()
 
     text_gen_service = kernel.get_service(service_id="default")
 
-    
-  
-
-    # prompt = """Evaluate the following image from the point of view of marketability and ease of 3D printing.  
-    #                                 Make a one-sentense improvement suggestion.
-    #                                 Only respond with the suggestion.  Do not explain the reasons for the suggestion.
-    #                                 """
-
     items = [TextContent(text=prompt)]
 
     for image_path in image_paths:
-        base64_string = file_to_base64(image_path)
-        items.append(ImageContent(uri=f"data:image/png;base64,{base64_string}"))
+        if os.path.exists(image_path):
+            base64_string = file_to_base64(image_path)
+            items.append(ImageContent(uri=f"data:image/png;base64,{base64_string}"))
 
-    chat_history.add_message(ChatMessageContent(
+    _chat_history.add_message(ChatMessageContent(
             role=AuthorRole.USER,
             items=items
         ))
 
+    a = datetime.now()
+
+    print(f"-- evaluate_image.text_gen_service.get_chat_message_content starting at {a}")
+
     # Get the chat completion response
     eval_response = await text_gen_service.get_chat_message_content(
-        chat_history=chat_history,
+        chat_history=_chat_history,
         settings=execution_settings,
     )
+    print(f"-- evaluate_image.text_gen_service.get_chat_message_content in {datetime.now()-a} seconds")
 
     eval_response = str(eval_response)
     return eval_response
 
 
+def edit_image_to_file(image, mask, prompt, file_name, n=1, converter_func=lambda x: open(x, "rb").read()):
+    result_images = []
+    
+    image_base_64 = edit_image(converter_func(image), converter_func(mask) if mask else mask, prompt, n)  
 
-def edit_image(image, mask, prompt):
+    if not isinstance(image_base_64, list):
+        image_base_64 = [image_base_64]
+
+    result_images.extend(image_base_64)
+
+    print("RESULT IMAGES: ", len(result_images))
+    
+    image = result_images[0]
+        
+    image_data = base64.b64decode(image)
+
+    with open(file_name, "wb") as image_file:
+        image_file.write(image_data)
+
+    print(f"Saved edited image to: {file_name}")
+    
+    
+    print(f"KS: Adding generated image to ChatHistory: ${file_name}")
+    chat_history.add_message(ChatMessageContent(
+        role=AuthorRole.USER,
+        #items=[ImageContent(uri=f"data:image/png;base64,{result}")]
+        items=[ImageContent(uri=f"{file_name}")]
+    ))
+
+    print("Now chat_history is: ")
+    dump_history(_chat_history = chat_history)
+
+    return image
+
+
+def edit_image(image, mask, prompt, n=1, external_chat_history=None):
+    #_chat_history = external_chat_history if external_chat_history else chat_history
+
+    _chat_history = chat_history
+
+    result = None
+
+    if selectedService == Service.OpenAI:
+        print("Editing image using OPENAI API...")
+        result = sync_image_client.images.edit(
+            model="gpt-image-1",
+            image=[
+                open(image, "rb"),
+            ],
+            prompt=prompt,
+            n = n
+        )
+
+        result = result.data[0].b64_json
+    else:
+        print("Editing image using AZURE API...")
+        result = edit_image_azure(image, mask, prompt)
+
+
+    
+
+    return result           
+
+
+
+def edit_image_azure(image, mask, prompt, n=1):
+    return edit_image_base(image, mask, prompt, n)
+
+
+def edit_image_base(image, mask, prompt, n=1):
+
     url = f"{os.getenv('AZURE_IMAGE_GEN_ENDPOINT')}/openai/deployments/{os.getenv('AZURE_IMAGE_GEN_DEPLOYMENT_NAME')}/images/edits?api-version={os.getenv('AZURE_IMAGE_GEN_API_VERSION')}"
-
+    
     headers = {
         "Authorization": f"Bearer {os.getenv('AZURE_IMAGE_GEN_API_KEY')}"
     }
 
     files = {
         'image': ('image.png', image),
-        'mask': ('image.png', mask)
     }
-    
+
+    if mask:
+        files['mask'] = ('mask.png', mask)    
     
     data = {
-        "prompt": prompt
+        "prompt": prompt,
+        "n": n,
+        #"temperature": 0.6
     }
 
-    response = requests.post(url, data=data, files=files, headers=headers)
 
-    print("Status Code:", response.status_code)
+    a = datetime.now()
+    print(f"-- /edits (requests.post) starting at {a}")
+    response = None
+    for i in range(3):
+        try:
+            response = requests.post(url, data=data, files=files, headers=headers, timeout=300)
+            break
+        except:
+            print("Exception in /edits (requests.post):")
+            print("0", sys.exc_info()[0])
+            print("1", sys.exc_info()[1])
+            print("2", sys.exc_info()[2])
+
+    print(f"-- /edits (requests.post) in {datetime.now()-a} seconds")
+
+    print(f"Status Code[{n}]:", response.status_code)
 
     if response.status_code == 200:
         with open("response.json", "w") as f:
             f.write(response.text)
 
         response_js = response.json()
-        return response_js["data"][0]["b64_json"]
+
+        result_images = []
+        for i in range(len(response_js["data"])):
+            result_images.append(response_js["data"][i]["b64_json"])
+        
+        #return response_js["data"][0]["b64_json"]
+        return result_images[0] if len(result_images) == 1 else result_images
     else:
         print("Error:", response.text)
         return None

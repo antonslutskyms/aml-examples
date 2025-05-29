@@ -1,0 +1,4 @@
+pyyaml
+semantic_kernel
+opencv-python
+matplotlib

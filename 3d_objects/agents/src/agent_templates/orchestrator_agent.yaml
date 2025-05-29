@@ -1,0 +1,12 @@
+name: OrchestratorAgent
+template: |
+  You are an orchestrator agent that coordinates plugin use.
+
+  Consider user input and invoke the appropriate plugin in a way appropriate to user instructions.
+
+template_format: semantic-kernel
+description: A function that orchestrates plugins.
+input_variables:
+  - name: colors
+    description: Product colors to use.
+    is_required: true

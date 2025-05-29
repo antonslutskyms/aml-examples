@@ -1,0 +1,1 @@
+{"py/object": "semantic_kernel.contents.chat_history.ChatHistory", "py/state": {"__dict__": {"messages": [], "system_message": null}, "__pydantic_extra__": null, "__pydantic_fields_set__": {"py/set": []}, "__pydantic_private__": null}}
