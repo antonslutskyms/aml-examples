@@ -8,6 +8,8 @@ from semantic_kernel.contents.image_content import ImageContent
 from pydantic_core._pydantic_core import Url
 from datetime import datetime
 
+pref = kernel_services.pref
+
 class ImageAIModel(TypedDict):
     id: int
     name: str
@@ -34,11 +36,23 @@ class ImageAIPlugin:
         name = "generate_image",
         description = """
                         Generate an image for the given prompt.  
-                        Returns local path the the generated image.
+                        
+                        Parameters:
+                        - prompt -- instructions describing what image to generate.
+                        
+                        Returns:
+                        - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                        
                     """
     )
     async def generate_image(self, prompt):
-        generated_image_file = f"{self.output_dir}/image1.png"
+
+        now = datetime.now()
+        model_number = f"{now.strftime('%Y%m%d%H%M%S')}"
+        
+        generated_image_file = f"{self.output_dir}/image1_{model_number}.png"
+
+        #generated_image_file = f"{self.output_dir}/image1.png"
         print("!!!!!!!!!!!!!!!!!!!! Generating Image !!!!!!!!!!!!!!!!!!")
         response = await kernel_services.generate_image(prompt, generated_image_file, save_image=True, 
                             external_chat_history = kernel_services.chat_history)
@@ -50,10 +64,12 @@ class ImageAIPlugin:
     @kernel_function(name = "edit_last_image",
         description = """
                         Edits the last generated image for a given prompt.  
-                        Returns local path to the edited image.
                         Parameters:
-                        - base64_image -- must be full base64 encoded content of the image.
                         - prompt -- instructions describing what needs to be changed in the image.
+                        
+                        Returns:
+                        - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                        
                     """)
     async def edit_last_image(
       self,
@@ -87,7 +103,7 @@ class ImageAIPlugin:
 
                     print("Image content detected.  Item URI:")
                     
-                    pref = "data:image/png;base64,"
+                    
                         
                     if not uri.startswith(pref):
                         base64_images.append(kernel_services.file_to_base64(uri))
@@ -109,3 +125,31 @@ class ImageAIPlugin:
                         converter_func=base64.b64decode)
 
         return out_path
+
+
+    # @kernel_function(name = "describe_image",
+    # description = """
+    #                 Describes an image.  
+    #                 Parameters:
+    #                 - uri -- Uri to the image.  May be base64 or local path.
+                    
+    #                 Returns:
+    #                 - Image description            
+    #             """)
+    async def _describe_image(
+      self,
+      uri: str,
+      eval_prompt = "Describe this image"
+    ):
+
+        # if str(uri).startswith(pref):
+        #     base64_image = str(uri) #str(uri).replace(pref, "")    
+        # else:
+        #     base64_image = kernel_services.file_to_base64(uri)
+
+        print("URIIIIIIII:", uri)
+
+
+        eval_response = await kernel_services.evaluate_image(uri, eval_prompt, to_base64_converter=lambda x: x)
+
+        return eval_response

@@ -1,6 +1,7 @@
 print("Agents Manager Module Loading...")
 
 import yaml
+import sys
 import kernel_services
 print("Kernel Services Loaded")
 from semantic_kernel.prompt_template import PromptTemplateConfig
@@ -21,6 +22,7 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.contents import ChatMessageContent
 from datetime import datetime
 import os
+import pickle
 
 from local_python_plugin import LocalPythonPlugin
 
@@ -67,7 +69,7 @@ def create_chat_completion_agent(agent_type: SupportedAgents,
 
     return agent
 
-def setup_agents():
+def setup_agents(output_dir):
     image_gen_plugin = kernel_plugins.ImageAIPlugin(output_dir)
     
     kernel_services.kernel.add_plugin(
@@ -75,7 +77,10 @@ def setup_agents():
         "image_ai"
     )
 
-    kernel_services.kernel.add_plugin(plugin_name="LocalCodeExecutionTool", plugin=LocalPythonPlugin())
+    executor_plugin = LocalPythonPlugin()
+    executor_plugin._set_output_dir(output_dir)
+
+    kernel_services.kernel.add_plugin(plugin_name="LocalCodeExecutionTool", plugin=executor_plugin)
 
     agent = create_chat_completion_agent(SupportedAgents.IDEA_GENERATOR, plugins = ["image_ai"])
     available_agents[SupportedAgents.IDEA_GENERATOR] = agent
@@ -94,11 +99,92 @@ print("Functions Defined")
 
 ctrl_c = '\x03'
 
+def print_log(out, s):
+        print(s)
+        out.write(s+"\n")
+
+def dump_history(inflate_image = False):
+
+    print("Saving ChatHistory to PKL file")
+    
+    pkl_file = f"{output_dir}/chat_history.pkl"
+    output = open(pkl_file, 'wb')
+    pickle.dump(kernel_services.chat_history, output)
+    output.close()
+    print("Saved ChatHistory to: ", pkl_file)
+
+    with open(f"{output_dir}/history.txt", "w") as out:
+        inflated_chat_history = ChatHistory()
+
+        print_log(out, f"Chat History Sz:: {len(kernel_services.chat_history)}")
+
+        j = 1
+        for message in kernel_services.chat_history:
+            print_log(out, "..............................................................................................................")
+            print_log(out, f"#{j}")
+            print_log(out, f"[{message.role}] Message: {message}")
+
+            print_log(out, "\tItems: ")
+            i = 1
+
+            inflated_items = []
+
+            for item in message.items:
+                _item = item
+
+                if inflate_image and isinstance(item, ImageContent):
+                    print_log(out, f"Image content detected...")
+                    
+                    try:
+                        if not str(item.uri).startswith("data:image/"):
+                            _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
+                    except AttributeError as ex:
+                        print_log(out, f"Error creating new content: {ex}, {item}") 
+
+                print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...")
+
+                inflated_items.append(_item)
+
+            inflated_chat_history.add_message(ChatMessageContent(
+                role = message.role,
+                items=inflated_items
+            ))
+
+            j=j+1
+
+        return inflated_chat_history
+
+
+
 async def main():
     
-    print("[Main] Creating chat completion agent...")
+
+
+    print("------------- [Main] Creating chat completion agent...", sys.argv)
+
+    
+
+
+    if len(sys.argv) > 1:
+        new_output_dir = sys.argv[1]
+        print(f"Setting output_dir: {new_output_dir}")
+
+        output_dir = f"./output/{new_output_dir}"
+
+
+    saved_chat_history = f"{output_dir}/chat_history.pkl"
+
+    if os.path.isfile(saved_chat_history):
+        print("Loading Saved Chat History")
+        pkl_file = open(saved_chat_history, 'rb')
+
+        chat_history_loaded = pickle.load(pkl_file)
+        
+        kernel_services.chat_history = chat_history_loaded 
+        print("Chat History Loaded")
+        dump_history()
     # Example usage
-    setup_agents()
+    setup_agents(output_dir)
 
     print("Agents setup completed.\n")
     agent = get_agent(SupportedAgents.IDEA_GENERATOR)
@@ -119,52 +205,7 @@ async def main():
     #chat_history = kernel_services.chat_history
 
 
-    def print_log(out, s):
-        print(s)
-        out.write(s+"\n")
 
-    def dump_history(inflate_image = False):
-
-        with open(f"{output_dir}/history.txt", "w") as out:
-            inflated_chat_history = ChatHistory()
-
-            print_log(out, f"Chat History Sz:: {len(kernel_services.chat_history)}")
-
-            j = 1
-            for message in kernel_services.chat_history:
-                print_log(out, "..............................................................................................................")
-                print_log(out, f"#{j}")
-                print_log(out, f"[{message.role}] Message: {message}")
-
-                print_log(out, "\tItems: ")
-                i = 1
-
-                inflated_items = []
-
-                for item in message.items:
-                    _item = item
-
-                    if inflate_image and isinstance(item, ImageContent):
-                        print_log(out, f"Image content detected...")
-                        
-                        try:
-                            if not str(item.uri).startswith("data:image/"):
-                                _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
-                        except AttributeError as ex:
-                            print_log(out, f"Error creating new content: {ex}, {item}") 
-
-                    print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...")
-
-                    inflated_items.append(_item)
-
-                inflated_chat_history.add_message(ChatMessageContent(
-                    role = message.role,
-                    items=inflated_items
-                ))
-
-                j=j+1
-
-            return inflated_chat_history
 
 
     command_handlers = {"\\history" : dump_history}

@@ -15,5 +15,5 @@ for i in {1..1}
 do
 
     echo "Product: $i"
-    time python -u ./src/agents_manager.py "$random_letter" 
+    time python -u ./src/agents_manager.py $* "$random_letter" 
 done

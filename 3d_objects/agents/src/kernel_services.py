@@ -17,6 +17,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 from datetime import datetime
 
+pref = "data:image/png;base64,"
 
 kernel = Kernel()
 
@@ -143,7 +144,7 @@ async def generate_image(prompt, image_path, save_image=True, external_chat_hist
     a = datetime.now()
     print(f"-- Image Generated starting at {a} seconds")
     image = await image_gen_service.generate_image(
-        description=prompt, width=1024, height=1024, quality="auto"
+        description=prompt, width=1024, height=1024, quality="auto", chat_history = _chat_history
     )
     print(f"-- Image Generated in {datetime.now()-a} seconds")
 
@@ -204,7 +205,7 @@ async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64
 
     for image_path in image_paths:
         if os.path.exists(image_path):
-            base64_string = file_to_base64(image_path)
+            base64_string = file_to_base64(image_path) if not image_path.startswith(pref) else image_path
             items.append(ImageContent(uri=f"data:image/png;base64,{base64_string}"))
 
     _chat_history.add_message(ChatMessageContent(
