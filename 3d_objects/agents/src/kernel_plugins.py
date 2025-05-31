@@ -75,7 +75,44 @@ class ImageAIPlugin:
       self,
       prompt: str
     ):
-        print("~~ Edit Image Plugin Active ~~")
+        print("edit_last_image Active")
+        return await self.edit_nth_image(prompt, n = -1)
+
+
+    @kernel_function(name = "edit_first_image",
+    description = """
+                    Edits the first image generated during this session using a given prompt.  
+                    Parameters:
+                    - prompt -- instructions describing what needs to be changed in the image.
+                    
+                    Returns:
+                    - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                    
+                """)
+    async def edit_first_image(
+      self,
+      prompt: str
+    ):
+        print("edit_first_image Active")
+        return await self.edit_nth_image(prompt, n = 0)
+
+
+    @kernel_function(name = "edit_nth_image",
+    description = """
+                    Edits the nth image generated during this session using a given prompt.  
+                    Parameters:
+                    - prompt -- instructions describing what needs to be changed in the image.
+                    - n -- which image to edit.  0 means the first image in the session, -1 means the last image in session.  
+                    Returns:
+                    - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                    
+                """)
+    async def edit_nth_image(
+      self,
+      prompt: str,
+      n = -1
+    ):
+        print("~~ edit_nth_image: Edit Image Plugin Active ~~", n)
 
         now = datetime.now()
         model_number = f"{now.strftime('%Y%m%d%H%M%S')}"
@@ -114,14 +151,17 @@ class ImageAIPlugin:
                     print(f"Loaded Image contents: {base64_images[-1][:100]}..")
 
 
-        #base64_image = base64_images #[-1]
+        base64_image = base64_images[n]
+        
+        image_data = base64.b64decode(base64_image)
 
+        # Save the decoded data as an image file
+        with open(f"{self.output_dir}/last_image_to_edit.png", "wb") as image_file:
+            image_file.write(image_data)
 
-        #print("image_path: ", image_path)
-#        print(f"Base64 Image: {uris[-1]} |_{base64_image[:100]}..._|")
-        print(f"Base64 Image: {str(base64_images[-1])[:100]} |_..._|")
+        print(f"Base64 Image: {str(base64_image)[:100]} |_..._|")
 
-        await kernel_services.edit_image_to_file(base64_images, 
+        await kernel_services.edit_image_to_file([base64_image], 
                         None, f"Version [{out_path}]: {prompt}", 
                         out_path, 
                         converter_func=base64.b64decode)

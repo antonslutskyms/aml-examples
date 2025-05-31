@@ -248,10 +248,6 @@ async def edit_image_to_file(images, mask, prompt, file_name, n=1, converter_fun
     print("RESULT IMAGES: ", len(result_images))
     
     image = result_images[0]
-        
-    print("------------- IMAGE IMAGE IMAGE --------------")
-    print(image)
-    print("-=--------------------------------------------===")
 
     image_data = base64.b64decode(image)
 
