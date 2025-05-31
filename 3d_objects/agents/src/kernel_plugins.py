@@ -114,12 +114,14 @@ class ImageAIPlugin:
                     print(f"Loaded Image contents: {base64_images[-1][:100]}..")
 
 
-        base64_image = base64_images[-1]
+        #base64_image = base64_images #[-1]
 
 
         #print("image_path: ", image_path)
-        print(f"Base64 Image: {uris[-1]} |_{base64_image[:100]}..._|")
-        kernel_services.edit_image_to_file(base64_image, 
+#        print(f"Base64 Image: {uris[-1]} |_{base64_image[:100]}..._|")
+        print(f"Base64 Image: {str(base64_images[-1])[:100]} |_..._|")
+
+        await kernel_services.edit_image_to_file(base64_images, 
                         None, f"Version [{out_path}]: {prompt}", 
                         out_path, 
                         converter_func=base64.b64decode)

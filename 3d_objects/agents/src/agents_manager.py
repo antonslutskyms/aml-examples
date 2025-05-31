@@ -29,12 +29,6 @@ from local_python_plugin import LocalPythonPlugin
 from semantic_kernel.contents.image_content import ImageContent
 
 
-now = datetime.now()
-project_id = f"pro_{now.strftime('%Y%m%d%H%M')}"
-
-output_dir = f"./output/{project_id}"
-
-os.makedirs(output_dir, exist_ok=True)
 
 print("Imports Loaded")
 class SupportedAgents(Enum):
@@ -99,11 +93,12 @@ print("Functions Defined")
 
 ctrl_c = '\x03'
 
-def print_log(out, s):
-        print(s)
+def print_log(out, s, do_print):
+        if do_print:
+            print(s)
         out.write(s+"\n")
 
-def dump_history(inflate_image = False):
+def dump_history(output_dir, inflate_image = False, do_print = False):
 
     print("Saving ChatHistory to PKL file")
     
@@ -116,15 +111,15 @@ def dump_history(inflate_image = False):
     with open(f"{output_dir}/history.txt", "w") as out:
         inflated_chat_history = ChatHistory()
 
-        print_log(out, f"Chat History Sz:: {len(kernel_services.chat_history)}")
+        print_log(out, f"Chat History Sz:: {len(kernel_services.chat_history)}", do_print)
 
         j = 1
         for message in kernel_services.chat_history:
-            print_log(out, "..............................................................................................................")
-            print_log(out, f"#{j}")
-            print_log(out, f"[{message.role}] Message: {message}")
+            print_log(out, "..............................................................................................................", do_print)
+            print_log(out, f"#{j}", do_print)
+            print_log(out, f"[{message.role}] Message: {message}", do_print)
 
-            print_log(out, "\tItems: ")
+            print_log(out, "\tItems: ", do_print)
             i = 1
 
             inflated_items = []
@@ -133,15 +128,15 @@ def dump_history(inflate_image = False):
                 _item = item
 
                 if inflate_image and isinstance(item, ImageContent):
-                    print_log(out, f"Image content detected...")
+                    print_log(out, f"Image content detected...", do_print)
                     
                     try:
                         if not str(item.uri).startswith("data:image/"):
                             _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
                     except AttributeError as ex:
-                        print_log(out, f"Error creating new content: {ex}, {item}") 
+                        print_log(out, f"Error creating new content: {ex}, {item}", do_print) 
 
-                print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...")
+                print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...", do_print)
 
                 inflated_items.append(_item)
 
@@ -158,18 +153,21 @@ def dump_history(inflate_image = False):
 
 async def main():
     
-
-
     print("------------- [Main] Creating chat completion agent...", sys.argv)
-
-    
-
 
     if len(sys.argv) > 1:
         new_output_dir = sys.argv[1]
         print(f"Setting output_dir: {new_output_dir}")
 
         output_dir = f"./output/{new_output_dir}"
+    else:
+        now = datetime.now()
+        project_id = f"pro_{now.strftime('%Y%m%d%H%M')}"
+
+        output_dir = f"./output/{project_id}"
+
+        os.makedirs(output_dir, exist_ok=True)
+
 
 
     saved_chat_history = f"{output_dir}/chat_history.pkl"
@@ -182,7 +180,7 @@ async def main():
         
         kernel_services.chat_history = chat_history_loaded 
         print("Chat History Loaded")
-        dump_history()
+        dump_history(output_dir)
     # Example usage
     setup_agents(output_dir)
 
@@ -198,33 +196,22 @@ async def main():
     agent_handlers = {
         "/chat": get_agent(SupportedAgents.IDEA_GENERATOR)
     }
-
-
-
-
+    
     #chat_history = kernel_services.chat_history
 
-
-
-
-
     command_handlers = {"\\history" : dump_history}
-
-    default_prompt = """Generate an image of a tree.  
-                        Then generate python code using cv2 to display the generated image.  
-                        Then execute the generated code.
-                        Once the code is executed, give control back to the user.
-                        """
-
-    print("Default Prompt: ", default_prompt)
+    
     while True:
+
+        default_prompt = f"""{kernel_services.chat_history[-1]}""" if len(kernel_services.chat_history) > 0 else ""
+        print("Last Prompt: ", default_prompt)
 
         user_input = input(f"\nUser Input: ") or default_prompt
         
         print(f"User input received: {user_input}\n")
 
-        if user_input.startswith("\\"):
-            command_handlers[user_input]()
+        if user_input.startswith("\\history"):
+            dump_history(output_dir, do_print=True)
             continue
 
         if user_input.startswith("/"):
@@ -244,7 +231,7 @@ async def main():
         #response = agent.invoke(chat_history=chat_history)
         #response = await agent.get_response(messages=f"User input at {datetime}: {user_input}")
 
-        inflated_chat_history = dump_history(True)
+        inflated_chat_history = dump_history(output_dir, True)
 
         print("Getting Response from Agent...")
         response = await agent.get_response(# TODO: ??? chat_history = inflated_chat_history, 

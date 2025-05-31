@@ -228,10 +228,17 @@ async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64
     return eval_response
 
 
-def edit_image_to_file(image, mask, prompt, file_name, n=1, converter_func=lambda x: open(x, "rb").read()):
+async def edit_image_to_file(images, mask, prompt, file_name, n=1, converter_func=lambda x: open(x, "rb").read()):
     result_images = []
+    _images = []
     
-    image_base_64 = edit_image(converter_func(image), converter_func(mask) if mask else mask, prompt, n)  
+    print("edit_image_to_file.images: ", len(images))
+
+    for image in images:
+        _images.append(converter_func(image))
+
+
+    image_base_64 = await edit_image(_images, converter_func(mask) if mask else mask, prompt, n)  
 
     if not isinstance(image_base_64, list):
         image_base_64 = [image_base_64]
@@ -242,6 +249,10 @@ def edit_image_to_file(image, mask, prompt, file_name, n=1, converter_func=lambd
     
     image = result_images[0]
         
+    print("------------- IMAGE IMAGE IMAGE --------------")
+    print(image)
+    print("-=--------------------------------------------===")
+
     image_data = base64.b64decode(image)
 
     with open(file_name, "wb") as image_file:
@@ -257,13 +268,13 @@ def edit_image_to_file(image, mask, prompt, file_name, n=1, converter_func=lambd
         items=[ImageContent(uri=f"{file_name}")]
     ))
 
-    print("Now chat_history is: ")
-    dump_history(_chat_history = chat_history)
+    #print("Now chat_history is: ")
+    #dump_history(_chat_history = chat_history)
 
     return image
 
 
-def edit_image(image, mask, prompt, n=1, external_chat_history=None):
+async def edit_image(images, mask, prompt, n=1, external_chat_history=None):
     #_chat_history = external_chat_history if external_chat_history else chat_history
 
     _chat_history = chat_history
@@ -274,9 +285,10 @@ def edit_image(image, mask, prompt, n=1, external_chat_history=None):
         print("Editing image using OPENAI API...")
         result = sync_image_client.images.edit(
             model="gpt-image-1",
-            image=[
-                open(image, "rb"),
-            ],
+            image = [open(image, "rb") for image in images],
+            # image=[
+            #     open(image, "rb"),
+            # ],
             prompt=prompt,
             n = n
         )
@@ -284,7 +296,7 @@ def edit_image(image, mask, prompt, n=1, external_chat_history=None):
         result = result.data[0].b64_json
     else:
         print("Editing image using AZURE API...")
-        result = edit_image_azure(image, mask, prompt)
+        result = await edit_image_azure(images, mask, prompt)
 
 
     
@@ -293,21 +305,44 @@ def edit_image(image, mask, prompt, n=1, external_chat_history=None):
 
 
 
-def edit_image_azure(image, mask, prompt, n=1):
-    return edit_image_base(image, mask, prompt, n)
+async def edit_image_azure(images, mask, prompt, n=1):
+    return edit_image_base(images, mask, prompt, n)
 
 
-def edit_image_base(image, mask, prompt, n=1):
+async def edit_image_base_2(images, mask, prompt, n=1):
 
+    result = await image_client.images.edit(
+        model="gpt-image-1",
+        image = images,
+        prompt=prompt)
+
+    return result.data[0].b64_json
+
+
+
+def edit_image_base(images, mask, prompt, n=1):
+
+    print("Images: ", len(images))
     url = f"{os.getenv('AZURE_IMAGE_GEN_ENDPOINT')}/openai/deployments/{os.getenv('AZURE_IMAGE_GEN_DEPLOYMENT_NAME')}/images/edits?api-version={os.getenv('AZURE_IMAGE_GEN_API_VERSION')}"
     
     headers = {
         "Authorization": f"Bearer {os.getenv('AZURE_IMAGE_GEN_API_KEY')}"
     }
 
-    files = {
-        'image': ('image.png', image),
-    }
+    files = {}
+
+
+    i=-1
+    i_pref = ""
+    for image in images:
+        files[f'image{i_pref}'] = (f'image{i_pref}.png', image)
+        # TODO: just one image
+        break
+        i_pref = f"_{++i}"
+        
+
+
+    #print("files:", files)
 
     if mask:
         files['mask'] = ('mask.png', mask)    
@@ -322,15 +357,15 @@ def edit_image_base(image, mask, prompt, n=1):
     a = datetime.now()
     print(f"-- /edits (requests.post) starting at {a}")
     response = None
-    for i in range(3):
-        try:
-            response = requests.post(url, data=data, files=files, headers=headers, timeout=300)
-            break
-        except:
-            print("Exception in /edits (requests.post):")
-            print("0", sys.exc_info()[0])
-            print("1", sys.exc_info()[1])
-            print("2", sys.exc_info()[2])
+#    for i in range(3):
+#        try:
+    response = requests.post(url, data=data, files=files, headers=headers, timeout=300)
+#            break
+#        except:
+#            print("Exception in /edits (requests.post):")
+#            print("0", sys.exc_info()[0])
+#            print("1", sys.exc_info()[1])
+#            print("2", sys.exc_info()[2])
 
     print(f"-- /edits (requests.post) in {datetime.now()-a} seconds")
 

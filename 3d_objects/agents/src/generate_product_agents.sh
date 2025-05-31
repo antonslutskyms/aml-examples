@@ -14,6 +14,7 @@ random_letter="${l1}${l2}${l3}"
 for i in {1..1}
 do
 
-    echo "Product: $i"
-    time python -u ./src/agents_manager.py $* "$random_letter" 
+    echo "Product [$i] RID:$random_letter"
+
+    time python -u ./src/agents_manager.py $*  
 done
