@@ -79,53 +79,26 @@ image_gen_service = ImageGenTextToImage (
 )
 kernel.add_service(image_gen_service)
 
+# ---------------- Register Non-AOAI service -----------
+# from azure.ai.inference.aio import ChatCompletionsClient
+# from azure.identity.aio import DefaultAzureCredential
+
+# from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+
+# chat_completion_service = AzureAIInferenceChatCompletion(
+#     ai_model_id="<deployment-name>",
+#     client=ChatCompletionsClient(
+#         endpoint=f"{str(<your-azure-open-ai-endpoint>).strip('/')}/openai/deployments/{<deployment_name>}",
+#         credential=DefaultAzureCredential(),
+#         credential_scopes=["https://cognitiveservices.azure.com/.default"],
+#     ),
+# )
+
+
 image_gen_service = kernel.get_service(service_id="gpt-image-1")
 text_gen_service = kernel.get_service(service_id="default")
 
-
 chat_history = ChatHistory()
-
-
-def dump_history(_chat_history = chat_history, inflate_image = False):
-
-    inflated_chat_history = ChatHistory()
-
-    print("Chat History Sz::", len(_chat_history))
-    j = 1
-    for message in _chat_history:
-        print("..............................................................................................................")
-        print(f"#{j}")
-        print(f"[{message.role}] Message: ", message)
-
-        print("\tItems: ")
-        i = 1
-
-        inflated_items = []
-
-        for item in message.items:
-            _item = item
-
-            if inflate_image and isinstance(item, ImageContent):
-                print("Image content detected.  Item URI", item.uri)
-                
-                try:
-                    if not str(item.uri).startswith("data:image/"):
-                        _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
-                except AttributeError as ex:
-                    print("Error creating new content: ", ex, item) 
-
-            print(f"\t\tItem[{j}{++i}]: ", type(_item), str(_item)[:300], "...")
-
-            inflated_items.append(_item)
-
-        inflated_chat_history.add_message(ChatMessageContent(
-            role = message.role,
-            items=inflated_items
-        ))
-
-        j=j+1
-
-    return inflated_chat_history
 
 # Function to convert a file to Base64
 def file_to_base64(file_path):
@@ -263,10 +236,6 @@ async def edit_image_to_file(images, mask, prompt, file_name, n=1, converter_fun
         #items=[ImageContent(uri=f"data:image/png;base64,{result}")]
         items=[ImageContent(uri=f"{file_name}")]
     ))
-
-    #print("Now chat_history is: ")
-    #dump_history(_chat_history = chat_history)
-
     return image
 
 

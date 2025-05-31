@@ -24,10 +24,12 @@ from datetime import datetime
 import os
 import pickle
 
-from local_python_plugin import LocalPythonPlugin
+from python_loc_plugin import LocalPythonPlugin
 
 from semantic_kernel.contents.image_content import ImageContent
+from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 
+chat_completion_service = AzureAIInferenceChatCompletion(ai_model_id="<deployment-name>")
 
 
 print("Imports Loaded")
@@ -196,7 +198,7 @@ async def main():
     agent_handlers = {
         "/chat": get_agent(SupportedAgents.IDEA_GENERATOR)
     }
-    
+
     #chat_history = kernel_services.chat_history
 
     command_handlers = {"\\history" : dump_history}
