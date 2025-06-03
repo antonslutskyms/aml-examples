@@ -41,7 +41,7 @@ class ImageAIPlugin:
                         - prompt -- instructions describing what image to generate.
                         
                         Returns:
-                        - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                        - Local Path to the edited image. Returned Local Path is of the following format: ./image1_* 
                         
                     """
     )
@@ -68,7 +68,7 @@ class ImageAIPlugin:
                         - prompt -- instructions describing what needs to be changed in the image.
                         
                         Returns:
-                        - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                        - Local Path to the edited image. Returned Local Path is of the following format: ./image1_* 
                         
                     """)
     async def edit_last_image(
@@ -86,7 +86,7 @@ class ImageAIPlugin:
                     - prompt -- instructions describing what needs to be changed in the image.
                     
                     Returns:
-                    - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                    - Local Path to the edited image. Returned Local Path is of the following format: ./image1_* 
                     
                 """)
     async def edit_first_image(
@@ -104,7 +104,7 @@ class ImageAIPlugin:
                     - prompt -- instructions describing what needs to be changed in the image.
                     - n -- which image to edit.  0 means the first image in the session, -1 means the last image in session.  
                     Returns:
-                    - Local Path to the edited image. Returned Local Path is of the following format: ./output/pro_* 
+                    - Local Path to the edited image. Returned Local Path is of the following format: ./image1_*.png 
                     
                 """)
     async def edit_nth_image(
@@ -150,6 +150,7 @@ class ImageAIPlugin:
                         uris.append(uri[:150])
                     print(f"Loaded Image contents: {base64_images[-1][:100]}..")
 
+        print("Found Image Context:", len(base64_images))
 
         base64_image = base64_images[n]
         
@@ -169,16 +170,16 @@ class ImageAIPlugin:
         return out_path
 
 
-    # @kernel_function(name = "describe_image",
-    # description = """
-    #                 Describes an image.  
-    #                 Parameters:
-    #                 - uri -- Uri to the image.  May be base64 or local path.
+    @kernel_function(name = "describe_image",
+    description = """
+                    Describes an image.  
+                    Parameters:
+                    - uri -- May be base64 or local path to an image following the pattern: ./*
                     
-    #                 Returns:
-    #                 - Image description            
-    #             """)
-    async def _describe_image(
+                    Returns:
+                    - Image description text            
+                """)
+    async def describe_image(
       self,
       uri: str,
       eval_prompt = "Describe this image"

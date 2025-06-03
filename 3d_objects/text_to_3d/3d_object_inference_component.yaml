@@ -2,7 +2,7 @@ $schema: https://azuremlschemas.azureedge.net/latest/component.schema.json
 name: three_d_object_inference
 code: ./src
 command: >-
-   ./run.sh ${{inputs.flat_image}} ${{outputs.output_dir}} 
+   ./run.sh ${{inputs.flat_image}} ${{outputs.output_dir}}; echo "Entering Debug Mode"; sleep 12000
 inputs:
   flat_image: 
     type: uri_file
@@ -19,7 +19,7 @@ services:
       type: jupyter_lab
       nodes: all
 environment: azureml:tellis3d_env:7
-compute: azureml:Standard-ND40rs-v2
+compute: azureml:Standard-NC40ads-H100-v5
 experiment_name: 3d_object_inference
 display_name: 3d_object_inference
 description: 3d_object_inference

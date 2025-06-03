@@ -27,9 +27,9 @@ import pickle
 from python_loc_plugin import LocalPythonPlugin
 
 from semantic_kernel.contents.image_content import ImageContent
-from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+# from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 
-chat_completion_service = AzureAIInferenceChatCompletion(ai_model_id="<deployment-name>")
+#chat_completion_service = AzureAIInferenceChatCompletion(ai_model_id="<deployment-name>")
 
 
 print("Imports Loaded")
@@ -42,7 +42,7 @@ available_agents = {}
 print("Agents Available: ", available_agents)
 
 def create_chat_completion_agent(agent_type: SupportedAgents, 
-                                    template_file="./src/agent_templates/orchestrator_agent.yaml",
+                                    template_file="../../src/agent_templates/orchestrator_agent.yaml",
                                     plugins=[],
                                      **kwargs):
     
@@ -95,61 +95,9 @@ print("Functions Defined")
 
 ctrl_c = '\x03'
 
-def print_log(out, s, do_print):
-        if do_print:
-            print(s)
-        out.write(s+"\n")
 
-def dump_history(output_dir, inflate_image = False, do_print = False):
 
-    print("Saving ChatHistory to PKL file")
-    
-    pkl_file = f"{output_dir}/chat_history.pkl"
-    output = open(pkl_file, 'wb')
-    pickle.dump(kernel_services.chat_history, output)
-    output.close()
-    print("Saved ChatHistory to: ", pkl_file)
 
-    with open(f"{output_dir}/history.txt", "w") as out:
-        inflated_chat_history = ChatHistory()
-
-        print_log(out, f"Chat History Sz:: {len(kernel_services.chat_history)}", do_print)
-
-        j = 1
-        for message in kernel_services.chat_history:
-            print_log(out, "..............................................................................................................", do_print)
-            print_log(out, f"#{j}", do_print)
-            print_log(out, f"[{message.role}] Message: {message}", do_print)
-
-            print_log(out, "\tItems: ", do_print)
-            i = 1
-
-            inflated_items = []
-
-            for item in message.items:
-                _item = item
-
-                if inflate_image and isinstance(item, ImageContent):
-                    print_log(out, f"Image content detected...", do_print)
-                    
-                    try:
-                        if not str(item.uri).startswith("data:image/"):
-                            _item = ImageContent(uri=f"data:image/png;base64,{kernel_services.file_to_base64(str(item.uri))}")
-                    except AttributeError as ex:
-                        print_log(out, f"Error creating new content: {ex}, {item}", do_print) 
-
-                print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...", do_print)
-
-                inflated_items.append(_item)
-
-            inflated_chat_history.add_message(ChatMessageContent(
-                role = message.role,
-                items=inflated_items
-            ))
-
-            j=j+1
-
-        return inflated_chat_history
 
 
 
@@ -161,14 +109,17 @@ async def main():
         new_output_dir = sys.argv[1]
         print(f"Setting output_dir: {new_output_dir}")
 
-        output_dir = f"./output/{new_output_dir}"
+        #output_dir = f"./output/{new_output_dir}"
+        #output_dir = f"{new_output_dir}"
+        output_dir = "."
     else:
-        now = datetime.now()
-        project_id = f"pro_{now.strftime('%Y%m%d%H%M')}"
+        raise ValueError("output directory required")
+        # now = datetime.now()
+        # project_id = f"pro_{now.strftime('%Y%m%d%H%M')}"
 
-        output_dir = f"./output/{project_id}"
+        # output_dir = f"./output/{project_id}"
 
-        os.makedirs(output_dir, exist_ok=True)
+        # os.makedirs(output_dir, exist_ok=True)
 
 
 
@@ -182,7 +133,7 @@ async def main():
         
         kernel_services.chat_history = chat_history_loaded 
         print("Chat History Loaded")
-        dump_history(output_dir)
+        kernel_services.dump_history(output_dir)
     # Example usage
     setup_agents(output_dir)
 
@@ -201,19 +152,26 @@ async def main():
 
     #chat_history = kernel_services.chat_history
 
-    command_handlers = {"\\history" : dump_history}
+    SLASH_HISTORY = "\\history"
+
+    command_handlers = {SLASH_HISTORY : kernel_services.dump_history}
     
     while True:
-
+        print("\n*****************************************************************************************************\n")
         default_prompt = f"""{kernel_services.chat_history[-1]}""" if len(kernel_services.chat_history) > 0 else ""
-        print("Last Prompt: ", default_prompt)
+        
 
-        user_input = input(f"\nUser Input: ") or default_prompt
+        user_input = input(f"Press [ENTER] for: \"{default_prompt}\"\nEnter Input:) ") or default_prompt
         
         print(f"User input received: {user_input}\n")
 
-        if user_input.startswith("\\history"):
-            dump_history(output_dir, do_print=True)
+        if user_input.startswith(SLASH_HISTORY):
+
+            hist_cmd = user_input.strip().replace(SLASH_HISTORY, "").strip()
+            if "pop" == hist_cmd:
+                kernel_services.chat_history.remove_message(kernel_services.chat_history[-1])
+
+            kernel_services.dump_history(output_dir, do_print=True)
             continue
 
         if user_input.startswith("/"):
@@ -233,7 +191,7 @@ async def main():
         #response = agent.invoke(chat_history=chat_history)
         #response = await agent.get_response(messages=f"User input at {datetime}: {user_input}")
 
-        inflated_chat_history = dump_history(output_dir, True)
+        inflated_chat_history = kernel_services.dump_history(output_dir, True)
 
         print("Getting Response from Agent...")
         response = await agent.get_response(# TODO: ??? chat_history = inflated_chat_history, 

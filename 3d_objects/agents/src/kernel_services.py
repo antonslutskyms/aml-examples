@@ -16,8 +16,66 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI, OpenAI
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 from datetime import datetime
+import pickle
 
 pref = "data:image/png;base64,"
+
+def print_log(out, s, do_print):
+    if do_print:
+        print(s)
+    out.write(s+"\n")
+
+def dump_history(output_dir, inflate_image = False, do_print = False):
+
+    print("Saving ChatHistory to PKL file")
+    
+    pkl_file = f"{output_dir}/chat_history.pkl"
+
+    output = open(pkl_file, 'wb')
+    pickle.dump(chat_history, output)
+    output.close()
+    print("Saved ChatHistory to: ", pkl_file)
+
+    with open(f"{output_dir}/history.txt", "w") as out:
+        inflated_chat_history = ChatHistory()
+
+        print_log(out, f"Chat History Sz:: {len(chat_history)}", do_print)
+
+        j = 1
+        for message in chat_history:
+            print_log(out, "..............................................................................................................", do_print)
+            print_log(out, f"#{j}", do_print)
+            print_log(out, f"[{message.role}] Message: {message}", do_print)
+
+            print_log(out, "\tItems: ", do_print)
+            i = 1
+
+            inflated_items = []
+
+            for item in message.items:
+                _item = item
+                if inflate_image: 
+                    if isinstance(item, ImageContent):
+                        print_log(out, f"Image content detected...", do_print)
+                        
+                        try:
+                            if not str(item.uri).startswith("data:image/"):
+                                _item = ImageContent(uri=f"data:image/png;base64,{file_to_base64(str(item.uri))}")
+                        except AttributeError as ex:
+                            print_log(out, f"Error creating new content: {ex}, {item}", do_print) 
+
+                    inflated_items.append(_item)
+                
+                print_log(out, f"\t\tItem[{j}{++i}]: {type(_item)}, {str(_item)[:300]}...", do_print)
+
+            inflated_chat_history.add_message(ChatMessageContent(
+                role = message.role,
+                items=inflated_items
+            ))
+
+            j=j+1
+
+        return inflated_chat_history
 
 kernel = Kernel()
 
@@ -164,8 +222,10 @@ async def get_chat_message_content(prompt, external_chat_history=None):
 
 import os
 
-async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64, external_chat_history=None):
-    _chat_history = external_chat_history if external_chat_history else chat_history
+async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64, external_chat_history=None, output_dir="."):
+    #_chat_history = ChatHistory() #external_chat_history if external_chat_history else chat_history
+
+    _chat_history = dump_history(output_dir, True)
 
     if not isinstance(image_paths, list):
         image_paths = [image_paths]
@@ -177,16 +237,21 @@ async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64
     items = [TextContent(text=prompt)]
 
     for image_path in image_paths:
-        if os.path.exists(image_path):
-            base64_string = file_to_base64(image_path) if not image_path.startswith(pref) else image_path
-            items.append(ImageContent(uri=f"data:image/png;base64,{base64_string}"))
+        print("Looking at path:", image_path)
 
-    _chat_history.add_message(ChatMessageContent(
-            role=AuthorRole.USER,
-            items=items
-        ))
+        if os.path.exists(image_path):
+            print("Path found: ", image_path)
+            base64_string = file_to_base64(image_path) if not image_path.startswith(pref) else image_path
+            items.append(ImageContent(uri=f"data:image/png;base64, {base64_string}"))
 
     a = datetime.now()
+
+    image_content = ChatMessageContent(
+        role=AuthorRole.USER,
+        items=items
+    )
+
+    _chat_history.add_message(image_content)
 
     print(f"-- evaluate_image.text_gen_service.get_chat_message_content starting at {a}")
 
@@ -195,6 +260,9 @@ async def evaluate_image(image_paths, prompt, to_base64_converter=file_to_base64
         chat_history=_chat_history,
         settings=execution_settings,
     )
+
+    chat_history.add_message(image_content)
+
     print(f"-- evaluate_image.text_gen_service.get_chat_message_content in {datetime.now()-a} seconds")
 
     eval_response = str(eval_response)

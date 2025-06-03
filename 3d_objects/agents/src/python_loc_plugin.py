@@ -11,7 +11,11 @@ from semantic_kernel.kernel_pydantic import KernelBaseModel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.exceptions.function_exceptions import FunctionExecutionException
 
+from semantic_kernel.contents import ChatMessageContent, TextContent, ImageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+
 import kernel_services
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -85,82 +89,109 @@ class LocalPythonPlugin(KernelBaseModel):
 
         logger.info(f"Executing Python code: {code}")
 
-        try:
-            # Save the code to a temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as temp_file:
-                temp_file.write(code.encode())
-                temp_file_path = temp_file.name
+#        try:
+        # Save the code to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as temp_file:
+            temp_file.write(code.encode())
+            temp_file_path = temp_file.name
 
-            # Log the generated code
-            logger.info(f"Generated code:\n{code}")
+        # Log the generated code
+        logger.info(f"Generated code:\n{code}")
 
-            generated_code_file = f"{self._output_dir}/generated_code.py"
+        now = datetime.now()
+        code_id = f"pro_{now.strftime('%Y%m%d%H%M%S')}"
 
-            # Save the generated code to a file
-            with open(generated_code_file, "w") as file:
-                file.write(code)
+        code_dir = f"{self._output_dir}/code"
+        os.makedirs(code_dir, exist_ok=True)
 
-                
-            print(f"Generated code:\n{code}")
+        generated_code_file = f"{code_dir}/generated_code_{code_id}.py"
 
-            # Unrestricted execution: Allow all built-in functions
-            safe_globals = {"__builtins__": __builtins__}  # Allow all built-ins
-            safe_locals = {}  # Create a local execution scope
+        # Save the generated code to a file
+        with open(generated_code_file, "w") as file:
+            file.write(code)
 
-            print("\nWARNING: local_python_plugin is executing AI generated python code")
-            # Read the code from the temporary file and execute it safely
             
-            #import subprocess
-            #result = subprocess.run(["conda", "env", "list"], capture_output=True, text=True)
-            # result = subprocess.run(["python", generated_code_file], capture_output=True, text=True)
-            # print("----------- Subprocess Result: --------------")
-            # print(result.stdout)
-            # print("**********************************************")
-            # print(result.stderr)
-            # print("----------------------------------")
+        print(f"Generated code:\n{code}")
 
-            #generated_code_file = "./output/pro_202505291705/generated_code.py"
-            print("generated_code_file", generated_code_file)
-            with open(generated_code_file, "r") as file:
-                read_code = file.read()
-                print("Calling eval() with code -----------------------------------\n", read_code)
+        # Unrestricted execution: Allow all built-in functions
+        safe_globals = {"__builtins__": __builtins__}  # Allow all built-ins
+        safe_locals = {}  # Create a local execution scope
 
+        print("\nWARNING: local_python_plugin is executing AI generated python code")
+        # Read the code from the temporary file and execute it safely
 
-                stdout_capture = io.StringIO()
+        #generated_code_file = "./output/pro_202505291705/generated_code.py"
+        print("generated_code_file", generated_code_file)
+        with open(generated_code_file, "r") as file:
+            read_code = file.read()
+            # tabbed_read_code = read_code.replace('\n', '\n\t')
 
-                sys.stdout = stdout_capture
+            code_template = read_code
+#             f"""
+# import sys
+# try:
+#     print('Executing generated code:...')
+#     def _func_to_run():
+#         return \ 
+#         {tabbed_read_code}
 
-                #eval_result = 
+#     _func_result = _func_to_run()
+#     print('Generated code executed successfully!')
+#     print(f'Code execution result:', _func_result)
+# except:
+#     print('Exception executing code: ', sys.exc_info())
+#             """
+
+            print(f"Calling eval() with code -----------------------------------\n:{code_template}")
+
+            kernel_services.chat_history.add_message(ChatMessageContent(
+                role=AuthorRole.ASSISTANT,
+                items=[TextContent(text=code_template)]
+            ))
+
+            stdout_capture = io.StringIO()
+            stdout_capture_err = io.StringIO()
+
+            sys.stdout = stdout_capture
+            sys.stderr = stdout_capture_err
+            try:
+                # EXEC EXEC EXEC
                 exec(read_code, safe_globals, safe_locals)
-
+            except:
+                print('Exception executing code: ', sys.exc_info())
+            finally:
                 # Reset sys.stdout to its original state
                 sys.stdout = sys.__stdout__
+                sys.stderr = sys.__stderr__
 
-                # Get the captured output
-                captured_output = stdout_capture.getvalue()
-                stdout_capture.close()
+            # Get the captured output
+            captured_output = stdout_capture.getvalue()
+            stdout_capture.close()
 
-                print("Captured Output:")
-                print(captured_output)
+            captured_output_err = stdout_capture_err.getvalue()
+            stdout_capture_err.close()
 
-                
+            print("Captured Output:")
+            print(captured_output)
+            if captured_output:
+                kernel_services.chat_history.add_message(ChatMessageContent(
+                                                    role=AuthorRole.ASSISTANT,
+                                                    items=[TextContent(
+                                                                metadata = {"source" : "python"},
+                                                                text=captured_output)]
+                                                ))
 
+            
+            print("Captured Error:")
+            print(captured_output_err)
+            if captured_output_err:
+                kernel_services.chat_history.add_message(ChatMessageContent(
+                                                    role=AuthorRole.ASSISTANT,
+                                                    items=[TextContent(
+                                                        metadata = {"source" : "python"},
+                                                        text=captured_output_err)]
+                                                ))
 
-
-                #print("locals:", locals().items())
-                #print("eval_result: ", eval_result)
             print("WARNING: done executing AI generated python code")
 
-            # Return only defined variables (not execution metadata)
-            return str(
-                {
-                    key: safe_locals[key]
-                    for key in safe_locals
-                    if not key.startswith("__")
-                }
-            )
-        except Exception as e:
-            logger.error(f"LocalPythonPlugin: Error executing code: {e}")
-            return f"Error executing code: {e}"
-
-    # endregion
+            return f"{captured_output}{captured_output_err}"

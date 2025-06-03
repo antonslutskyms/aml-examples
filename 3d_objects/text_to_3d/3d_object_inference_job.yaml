@@ -1,12 +1,12 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
 code: ./src
 command: >-
-   ./run.sh "${{inputs.flat_image}}" ${{outputs.output_dir}} 
+   ./run.sh "${{inputs.flat_image}}" ${{outputs.output_dir}}; sleep 12000
 inputs:
   flat_image: 
     type: uri_file
     mode: ro_mount
-    path: azureml://subscriptions/781b03e7-6eb7-4506-bab8-cf3a0d89b1d4/resourcegroups/antonslutsky-rg/workspaces/gpu-workspace-westus2/datastores/workspaceblobstore/paths/azureml/joyful_bone_8v05yfdwmv/output_image
+    path: azureml://subscriptions/781b03e7-6eb7-4506-bab8-cf3a0d89b1d4/resourcegroups/antonslutsky-rg/workspaces/gpu-workspace-westus2/datastores/workspaceblobstore/paths/UI/2025-06-02_123801_UTC/51PllmShaoL._AC_SX679_.jpg
 outputs:
   output_dir:
     type: uri_folder
@@ -14,12 +14,10 @@ outputs:
 services:
     my_vs_code:
       type: vs_code
-      nodes: all 
     my_jupyter_lab:
       type: jupyter_lab
-      nodes: all
 environment: azureml:tellis3d_env:7
-compute: azureml:Standard-ND40rs-v2
+compute: azureml:Standard-NC40ads-H100-v5
 experiment_name: 3d_object_inference
 display_name: 3d_object_inference
 description: 3d_object_inference
