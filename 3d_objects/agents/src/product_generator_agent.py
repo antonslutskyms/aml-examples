@@ -111,7 +111,7 @@ async def generate_product(color, output_dir="."):
             Did the AI agent comply with the requirements?  
             
             The most important aspect is to make sure the appropriate number of puzzle pieces are separated by the {border} border.
-            If the number of pieces is acheived and the color scheme is roughly in the ballpark, the image is considered good enough.
+            If the number of pieces is achieved and the color scheme is roughly in the ballpark, the image is considered good enough.
 
             Respond "yes" or "no".
 
