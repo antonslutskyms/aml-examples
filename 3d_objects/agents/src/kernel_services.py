@@ -347,6 +347,7 @@ async def edit_image_base_2(images, mask, prompt, n=1):
     result = await image_client.images.edit(
         model="gpt-image-1",
         image = images,
+        chat_history = chat_history,
         prompt=prompt)
 
     return result.data[0].b64_json
